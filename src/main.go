@@ -1,11 +1,16 @@
 package main
 
-import "fmt"
-
 func main() {
+
+	// -------------------------------------------------------------------------------------------------
+	// constant: Containers (C) to be placed, physical Hosts (H) to be used and Resources (R) to examine
 	const C int = 12 // number of containers in service
 	const H int = 3  // number of physical hosts available for placement
 	const R int = 2  // number of resources to measure (2 = CPUs, Memory)
+	// -------------------------------------------------------------------------------------------------
+
+	// -------------------------------------------------------------------------------------------------
+	// resource values initialization and decision variable declaration
 
 	// resource demands in CPU, MEM per containers
 	var container_resources = [C][R]int{
@@ -28,9 +33,16 @@ func main() {
 	// decision variable (on what host is each container placed)
 	var x [C]int
 
-	for i := 0; i < 5; i++ {
-		fmt.Println(i)
-	}
+	var arr = [H]int{0, 1, 2} // the hosts the containers can be placed on
+	var n int = H
+	var r int = C
+	// -------------------------------------------------------------------------------------------------
+
+	// -------------------------------------------------------------------------------------------------
+	// main code
+
+	find_placement_combinations(arr, n, r) // finds all possible combinations with repetitions
+	// -------------------------------------------------------------------------------------------------
 
 	// minimize
 	// (sum(c in containers, r in resources, h in hosts)
