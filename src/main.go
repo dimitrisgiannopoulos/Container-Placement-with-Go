@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 func main() {
 
 	// -------------------------------------------------------------------------------------------------
@@ -12,36 +14,41 @@ func main() {
 	// -------------------------------------------------------------------------------------------------
 	// resource values initialization and decision variable declaration
 
-	// resource demands in CPU, MEM per containers
-	var container_resources = [C][R]int{
-		{300, 300}, {300, 128}, {200, 128}, {200, 128},
-		{200, 128}, {200, 128}, {500, 512}, {200, 128},
-		{200, 128}, {200, 450}, {125, 256}, {200, 128},
-	}
+	// // resource demands in CPU, MEM per containers
+	// var container_resources = [C][R]int{
+	// 	{300, 300}, {300, 128}, {200, 128}, {200, 128},
+	// 	{200, 128}, {200, 128}, {500, 512}, {200, 128},
+	// 	{200, 128}, {200, 450}, {125, 256}, {200, 128},
+	// }
 
-	// resources currently in use by hosts
-	var host_used_resources = [H][R]int{{359, 2685}, {437, 3414}, {305, 2451}}
+	// // resources currently in use by hosts
+	// var host_used_resources = [H][R]int{{359, 2685}, {437, 3414}, {305, 2451}}
 
-	// average resource utilization among all hosts (avg CPU, avg MEM)
-	var host_avg_resources = [R]float32{367, 2850}
+	// // average resource utilization among all hosts (avg CPU, avg MEM)
+	// var host_avg_resources = [R]float32{367, 2850}
 
-	// resources capacity per host (CPU, MEM)
-	var host_resource_capacities = [H][R]int{{8000, 7812}, {8000, 7812}, {8000, 7812}}
+	// // resources capacity per host (CPU, MEM)
+	// var host_resource_capacities = [H][R]int{{8000, 7812}, {8000, 7812}, {8000, 7812}}
 
-	var target_ratio float32 = 0.1
+	// var target_ratio float32 = 0.1
 
-	// decision variable (on what host is each container placed)
-	var x [C]int
+	// // decision variable (on what host is each container placed)
+	// var x [C]int
 
-	var arr = [H]int{0, 1, 2} // the hosts the containers can be placed on
-	var n int = H
-	var r int = C
+	var arr [H]int // the hosts the containers can be placed on
+	var n int = H  // items to be combined
+	var r int = C  // sample size
 	// -------------------------------------------------------------------------------------------------
 
 	// -------------------------------------------------------------------------------------------------
 	// main code
 
-	find_placement_combinations(arr, n, r) // finds all possible combinations with repetitions
+	// initialize array of hosts
+	for i := 0; i < H; i++ {
+		arr[i] = i
+	}
+
+	find_placement_combinations(arr[:], n, r) // finds all possible combinations with repetitions
 	// -------------------------------------------------------------------------------------------------
 
 	// minimize
@@ -65,14 +72,14 @@ func main() {
 	// }
 }
 
-// Resource Utilization cost: The cost from using resources in an unbalanced way.
-// Unbalanced resource usage across hosts creates bottlenecks.
+/* Resource Utilization cost: The cost from using resources in an unbalanced way.
+Unbalanced resource usage across hosts creates bottlenecks.*/
 func Ucost(host_used_resources int, container_resources int, host_avg_resources float32, H int) float32 {
 	return (float32(host_used_resources+container_resources) - host_avg_resources) / float32(H)
 }
 
-// Residual resource balance cost: The cost from depleting one resource, while having another resource left.
-// Having 100% use of one resource makes the other resources unusable.
+/* Residual resource balance cost: The cost from depleting one resource, while having another resource left.
+Having 100% use of one resource makes the other resources unusable.*/
 func Βcost(host_resource_r1_capacity int, host_used_resource_r1 int, container_resource_r1 int, host_resource_r2_capacity int, host_used_resource_r2 int, target_ratio float32) float32 {
 	var cost float32 = float32(host_resource_r1_capacity-host_used_resource_r1-container_resource_r1) - float32(host_resource_r2_capacity-host_used_resource_r2)*target_ratio
 	if cost > 0 {
@@ -81,9 +88,9 @@ func Βcost(host_resource_r1_capacity int, host_used_resource_r1 int, container_
 	return 0
 }
 
-// Comunication cost: The cost of placing containers of the same service on different physical hosts.
-// Placing containers on near servers minimizes communication cost.
-// If two containers are placed on the same server they contribute 0 to the cost, otherwise, they contribute 1
+/* Comunication cost: The cost of placing containers of the same service on different physical hosts.
+Placing containers on near servers minimizes communication cost.
+If two containers are placed on the same server they contribute 0 to the cost, otherwise, they contribute 1 */
 func Ccost(x []int, C int, H int) int {
 	var cost int = 0
 
@@ -95,4 +102,41 @@ func Ccost(x []int, C int, H int) int {
 		}
 	}
 	return cost
+}
+
+/* The main function that prints all combinations of size r
+in arr[] of size n with repetitions. This function mainly
+uses CombinationRepetitionUtil() */
+func find_placement_combinations(arr []int, n int, r int) {
+	// Allocate memory
+	chosen := make([]int, r+1)
+
+	// Call the recursive function
+	CombinationRepetitionUtil(chosen, arr, 0, r, 0, n-1)
+}
+
+/* arr[]  ---> Input Array
+chosen[] ---> Temporary array to store indices of
+                 current combination
+ start & end ---> Starting and Ending indexes in arr[]
+ r ---> Size of a combination to be printed */
+func CombinationRepetitionUtil(chosen []int, arr []int, index int, r int, start int, end int) {
+	// Since index has become r, current combination is
+	// ready to be printed, print
+	if index == r {
+		for i := 0; i < r; i++ {
+			fmt.Print(" ", arr[chosen[i]])
+		}
+		fmt.Println()
+		return
+	}
+
+	// One by one choose all elements (without considering
+	// the fact whether element is already chosen or not)
+	// and recur
+	for i := start; i <= end; i++ {
+		chosen[index] = i
+		CombinationRepetitionUtil(chosen, arr, index+1, r, i, end)
+	}
+	return
 }
