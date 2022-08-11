@@ -48,7 +48,9 @@ func main() {
 		arr[i] = i
 	}
 
-	find_placement_combinations(arr[:], n, r) // finds all possible combinations with repetitions
+	total_combinations := factorial(n+r-1) / (factorial(r) * factorial(n-1))
+	combinations_costs := make([]float32, total_combinations)
+	find_placement_combinations(arr[:], n, r, combinations_costs) // finds all possible combinations with repetitions
 	// -------------------------------------------------------------------------------------------------
 
 	// minimize
@@ -107,12 +109,12 @@ func Ccost(x []int, C int, H int) int {
 /* The main function that prints all combinations of size r
 in arr[] of size n with repetitions. This function mainly
 uses CombinationRepetitionUtil() */
-func find_placement_combinations(arr []int, n int, r int) {
+func find_placement_combinations(arr []int, n int, r int, combinations_costs []float32) {
 	// Allocate memory
 	chosen := make([]int, r+1)
 
 	// Call the recursive function
-	CombinationRepetitionUtil(chosen, arr, 0, r, 0, n-1)
+	CombinationRepetitionUtil(combinations_costs, chosen, arr, 0, r, 0, n-1)
 }
 
 /* arr[]  ---> Input Array
@@ -120,7 +122,7 @@ chosen[] ---> Temporary array to store indices of
                  current combination
  start & end ---> Starting and Ending indexes in arr[]
  r ---> Size of a combination to be printed */
-func CombinationRepetitionUtil(chosen []int, arr []int, index int, r int, start int, end int) {
+func CombinationRepetitionUtil(combinations_costs []float32, chosen []int, arr []int, index int, r int, start int, end int) {
 	// Since index has become r, current combination is
 	// ready to be printed, print
 	if index == r {
@@ -136,7 +138,15 @@ func CombinationRepetitionUtil(chosen []int, arr []int, index int, r int, start 
 	// and recur
 	for i := start; i <= end; i++ {
 		chosen[index] = i
-		CombinationRepetitionUtil(chosen, arr, index+1, r, i, end)
+		CombinationRepetitionUtil(combinations_costs, chosen, arr, index+1, r, i, end)
 	}
 	return
+}
+
+/*	factorial */
+func factorial(num int) int {
+	if num == 1 || num == 0 {
+		return num
+	}
+	return num * factorial(num-1)
 }
