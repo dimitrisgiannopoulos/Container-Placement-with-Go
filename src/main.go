@@ -1,6 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
+
+type Slice struct {
+	sort.Float64Slice
+	idx []int
+}
 
 func main() {
 
@@ -27,13 +35,13 @@ func main() {
 	var host_used_resources = [][]int{{359, 2685}, {437, 3414}, {305, 2451}}
 
 	// average resource utilization among all hosts (avg CPU, avg MEM)
-	var host_avg_resources = []float32{367, 2850}
+	var host_avg_resources = []float64{367, 2850}
 
 	// resources capacity per host (CPU, MEM)
 	var host_resource_capacities = [][]int{{8000, 7812}, {8000, 7812}, {8000, 7812}}
 
 	// The usage ratio between two resources. This example means we want about the same CPU usage as MEM usage
-	var target_ratio [][]float32 = [][]float32{{1, 1}, {1, 1}}
+	var target_ratio [][]float64 = [][]float64{{1, 1}, {1, 1}}
 	// To have a target ratio of CPU/MEM = 0.5 we would use this {{1, 0.5}, {2, 1}}
 
 	// decision variable (on what host is each container placed)
@@ -44,7 +52,7 @@ func main() {
 	var r int = C  // sample size
 
 	var placements [][]int // all possible placement combinations with repetitions
-	var placement_costs []float32
+	var placement_costs []float64
 	// -------------------------------------------------------------------------------------------------
 
 	// -------------------------------------------------------------------------------------------------
@@ -59,23 +67,14 @@ func main() {
 	// fmt.Print(" ", placements)                             // combinations[placements][hosts]
 
 	placement_costs = calculate_total_costs(placements, 1.0, 1.0, 1.0, C, H, R, host_used_resources, container_resources, host_avg_resources, host_resource_capacities, target_ratio)
-	// fmt.Print("\n ", placement_costs) // Since we have the placement costs, it's now only a matter of keeping the best placements (lowest cost, and applying constraints)
+	fmt.Println(placement_costs) // Since we have the placement costs, it's now only a matter of keeping the best placements (lowest cost, and applying constraints)
 
-	var indices []int
-	for i := 0; i < len(placement_costs); i++ {
-		indices = append(indices, i)
-	}
+	// placement_costs_slice := NewSlice(placement_costs)
+	// sort.Sort(placement_costs_slice)
+	// fmt.Println(placement_costs_slice.Float64Slice, placement_costs_slice.idx)
 
-	// fmt.Print("\n ", indices)
-
-	placement_costs, indices = custom_quickSort(placement_costs, indices, 0, len(placement_costs)-1)
-	fmt.Print("\n ", placement_costs)
-	// fmt.Print("\n ", indices)
-
-	// fmt.Print("\n ", placements[indices[0]])
-	// fmt.Print("\n ", placements[indices[1]])
-	// fmt.Print("\n ", placements[indices[2]])
-
+	// placement_costs, indices = custom_quickSort(placement_costs, indices, 0, len(placement_costs)-1)
+	// fmt.Print("\n ", placement_costs)
 	// -------------------------------------------------------------------------------------------------
 }
 
@@ -116,21 +115,21 @@ func CombinationRepetitionUtil(placements *[][]int, chosen []int, arr []int, ind
 	return
 }
 
-/* square of a float32 */
-func square(n float32) float32 {
+/* square of a float64 */
+func square(n float64) float64 {
 	return n * n
 }
 
 /* Resource Utilization cost: The cost from using resources in an unbalanced way.
 Unbalanced resource usage across hosts creates bottlenecks.*/
-func Ucost_per_resource(per_host_used_resources int, per_container_resources int, per_host_avg_resources float32, H int) float32 {
-	return (square(float32(per_host_used_resources+per_container_resources) - per_host_avg_resources)) / float32(H)
+func Ucost_per_resource(per_host_used_resources int, per_container_resources int, per_host_avg_resources float64, H int) float64 {
+	return (square(float64(per_host_used_resources+per_container_resources) - per_host_avg_resources)) / float64(H)
 }
 
 /* Residual resource balance cost: The cost from depleting one resource, while having another resource left.
 Having 100% use of one resource makes the other resources unusable.*/
-func Βcost_per_resource(host_resource_r1_capacity int, host_used_resource_r1 int, container_resource_r1 int, host_resource_r2_capacity int, host_used_resource_r2 int, target_ratio float32) float32 {
-	var cost float32 = float32(host_resource_r1_capacity-host_used_resource_r1-container_resource_r1) - float32(host_resource_r2_capacity-host_used_resource_r2)*target_ratio
+func Βcost_per_resource(host_resource_r1_capacity int, host_used_resource_r1 int, container_resource_r1 int, host_resource_r2_capacity int, host_used_resource_r2 int, target_ratio float64) float64 {
+	var cost float64 = float64(host_resource_r1_capacity-host_used_resource_r1-container_resource_r1) - float64(host_resource_r2_capacity-host_used_resource_r2)*target_ratio
 	if cost > 0 {
 		return cost
 	} else {
@@ -157,40 +156,56 @@ func Ccost_per_resource(placement []int, C int, H int) int {
 }
 
 /* The total cost calculated by adding the weighted different costs */
-func calculate_total_costs(placements [][]int, w1 float32, w2 float32, w3 float32, C int, H int, R int,
-	host_used_resources [][]int, container_resources [][]int, host_avg_resources []float32, host_resource_capacities [][]int, target_ratio [][]float32) []float32 {
+func calculate_total_costs(placements [][]int, w1 float64, w2 float64, w3 float64, C int, H int, R int,
+	host_used_resources [][]int, container_resources [][]int, host_avg_resources []float64, host_resource_capacities [][]int, target_ratio [][]float64) []float64 {
 
-	var total_costs []float32
-	var total_Ucost float32 = 0
-	var total_Bcost float32 = 0
-	var total_Ccost float32 = 0
+	var total_costs []float64
+	var total_Ucost []float64
+	var total_Bcost []float64
+	var total_Ccost []float64
 
 	for i := 0; i < len(placements); i++ {
+		total_Ucost = append(total_Ucost, 0)
+		total_Ccost = append(total_Ccost, 0)
+		total_Bcost = append(total_Bcost, 0)
 		for k := 0; k < R; k++ {
 			for j := 0; j < C; j++ {
-				total_Ucost += Ucost_per_resource(host_used_resources[placements[i][j]][k], container_resources[j][k], host_avg_resources[k], H) // Ucost
-				// total_Ccost += float32(Ccost_per_resource(placements[i], C, H)) // Ccost
+				total_Ucost[i] += Ucost_per_resource(host_used_resources[placements[i][j]][k], container_resources[j][k], host_avg_resources[k], H) // Ucost
+				total_Ccost[i] += float64(Ccost_per_resource(placements[i], C, H))                                                                  // Ccost
 				for l := k; l < R; l++ {
 					if k != l {
-						// total_Bcost += Βcost_per_resource(host_resource_capacities[placements[i][j]][k], host_used_resources[placements[i][j]][k], container_resources[j][k], host_resource_capacities[placements[i][j]][l], host_used_resources[placements[i][j]][l], target_ratio[k][l]) // Bcost
+						total_Bcost[i] += Βcost_per_resource(host_resource_capacities[placements[i][j]][k], host_used_resources[placements[i][j]][k], container_resources[j][k], host_resource_capacities[placements[i][j]][l], host_used_resources[placements[i][j]][l], target_ratio[k][l]) // Bcost
 					}
 				}
 			}
 		}
-
-		weighted_total_cost := w1*total_Ucost + w2*total_Bcost + w3*total_Ccost
-		total_costs = append(total_costs, weighted_total_cost)
-
-		total_Ucost = 0
-		total_Bcost = 0
-		total_Ccost = 0
 	}
+
+	min_Ucost, max_Ucost := findMinAndMax(total_Ucost)
+	min_Ccost, max_Ccost := findMinAndMax(total_Ccost)
+	min_Bcost, max_Bcost := findMinAndMax(total_Bcost)
+
+	fmt.Println(min_Ucost, max_Ucost, min_Ccost, max_Ccost, min_Bcost, max_Bcost)
+
+	for i := 0; i < len(placements); i++ {
+
+		total_Ucost[i] = (total_Ucost[i] - min_Ucost) / (max_Ucost - min_Ucost)
+		total_Ccost[i] = (total_Ccost[i] - min_Ccost) / (max_Ccost - min_Ccost)
+		total_Bcost[i] = (total_Bcost[i] - min_Bcost) / (max_Bcost - min_Bcost)
+
+		// weighted_total_cost := w1*total_Ucost[i] + w2*total_Ccost[i] + w3*total_Bcost[i]
+		// weighted_total_cost := w1 * total_Ucost[i]
+		// weighted_total_cost := w2 * total_Ccost[i]
+		weighted_total_cost := w3 * total_Bcost[i]
+		total_costs = append(total_costs, weighted_total_cost)
+	}
+	// fmt.Println(total_costs)
 
 	return total_costs
 }
 
 /* helper function for quicksort */
-func partition(arr []float32, ind []int, low, high int) ([]float32, int, []int) {
+func partition(arr []float64, ind []int, low, high int) ([]float64, int, []int) {
 	pivot := arr[high]
 	i := low
 	for j := low; j < high; j++ {
@@ -206,7 +221,7 @@ func partition(arr []float32, ind []int, low, high int) ([]float32, int, []int) 
 }
 
 /* Sorts low to high using the quicksort algorithm and returns the indices of the original array */
-func custom_quickSort(arr []float32, ind []int, low, high int) ([]float32, []int) {
+func custom_quickSort(arr []float64, ind []int, low, high int) ([]float64, []int) {
 	if low < high {
 		var p int
 		arr, p, ind = partition(arr, ind, low, high)
@@ -214,4 +229,32 @@ func custom_quickSort(arr []float32, ind []int, low, high int) ([]float32, []int
 		arr, ind = custom_quickSort(arr, ind, p+1, high)
 	}
 	return arr, ind
+}
+
+func (s Slice) Swap(i, j int) {
+	s.Float64Slice.Swap(i, j)
+	s.idx[i], s.idx[j] = s.idx[j], s.idx[i]
+}
+
+func NewSlice(n []float64) *Slice {
+	s := &Slice{Float64Slice: sort.Float64Slice(n), idx: make([]int, len(n))}
+	for i := range s.idx {
+		s.idx[i] = i
+	}
+	return s
+}
+
+/* returns the min and max of a float64 array */
+func findMinAndMax(a []float64) (min float64, max float64) {
+	min = a[0]
+	max = a[0]
+	for _, value := range a {
+		if value < min {
+			min = value
+		}
+		if value > max {
+			max = value
+		}
+	}
+	return min, max
 }
