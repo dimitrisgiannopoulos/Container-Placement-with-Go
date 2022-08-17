@@ -59,9 +59,23 @@ func main() {
 	// fmt.Print(" ", placements)                             // combinations[placements][hosts]
 
 	placement_costs = calculate_total_costs(placements, 1.0, 1.0, 1.0, C, H, R, host_used_resources, container_resources, host_avg_resources, host_resource_capacities, target_ratio)
-	fmt.Print("\n ", placement_costs) // Since we have the placement costs, it's now only a matter of keeping the best placements (lowest cost, and applying constraints)
+	// fmt.Print("\n ", placement_costs) // Since we have the placement costs, it's now only a matter of keeping the best placements (lowest cost, and applying constraints)
 
-	//quicksort placement_costs and keep best
+	var indices []int
+	for i := 0; i < len(placement_costs); i++ {
+		indices = append(indices, i)
+	}
+
+	// fmt.Print("\n ", indices)
+
+	placement_costs, indices = custom_quickSort(placement_costs, indices, 0, len(placement_costs)-1)
+	fmt.Print("\n ", placement_costs)
+	// fmt.Print("\n ", indices)
+
+	// fmt.Print("\n ", placements[indices[0]])
+	// fmt.Print("\n ", placements[indices[1]])
+	// fmt.Print("\n ", placements[indices[2]])
+
 	// -------------------------------------------------------------------------------------------------
 }
 
@@ -77,10 +91,9 @@ func find_placement_combinations(arr []int, n int, r int, placements *[][]int) {
 }
 
 /* arr[]  ---> Input Array
-chosen[] ---> Temporary array to store indices of
-                 current combination
- start & end ---> Starting and Ending indexes in arr[]
- r ---> Size of a combination to be printed */
+   chosen[] ---> Temporary array to store indices of current combination
+   start & end ---> Starting and Ending indexes in arr[]
+   r ---> Size of a combination to be printed */
 func CombinationRepetitionUtil(placements *[][]int, chosen []int, arr []int, index int, r int, start int, end int) {
 	// Since index has become r, current combination is
 	// ready to be printed, print
@@ -101,14 +114,6 @@ func CombinationRepetitionUtil(placements *[][]int, chosen []int, arr []int, ind
 		CombinationRepetitionUtil(placements, chosen, arr, index+1, r, i, end)
 	}
 	return
-}
-
-/*	factorial */
-func factorial(num int) int {
-	if num == 1 || num == 0 {
-		return num
-	}
-	return num * factorial(num-1)
 }
 
 /* square of a float32 */
@@ -164,10 +169,10 @@ func calculate_total_costs(placements [][]int, w1 float32, w2 float32, w3 float3
 		for k := 0; k < R; k++ {
 			for j := 0; j < C; j++ {
 				total_Ucost += Ucost_per_resource(host_used_resources[placements[i][j]][k], container_resources[j][k], host_avg_resources[k], H) // Ucost
-				total_Ccost += float32(Ccost_per_resource(placements[i], C, H))                                                                  // Ccost
+				// total_Ccost += float32(Ccost_per_resource(placements[i], C, H)) // Ccost
 				for l := k; l < R; l++ {
 					if k != l {
-						total_Bcost += Βcost_per_resource(host_resource_capacities[placements[i][j]][k], host_used_resources[placements[i][j]][k], container_resources[j][k], host_resource_capacities[placements[i][j]][l], host_used_resources[placements[i][j]][l], target_ratio[k][l]) // Bcost
+						// total_Bcost += Βcost_per_resource(host_resource_capacities[placements[i][j]][k], host_used_resources[placements[i][j]][k], container_resources[j][k], host_resource_capacities[placements[i][j]][l], host_used_resources[placements[i][j]][l], target_ratio[k][l]) // Bcost
 					}
 				}
 			}
@@ -182,4 +187,31 @@ func calculate_total_costs(placements [][]int, w1 float32, w2 float32, w3 float3
 	}
 
 	return total_costs
+}
+
+/* helper function for quicksort */
+func partition(arr []float32, ind []int, low, high int) ([]float32, int, []int) {
+	pivot := arr[high]
+	i := low
+	for j := low; j < high; j++ {
+		if arr[j] < pivot {
+			arr[i], arr[j] = arr[j], arr[i]
+			ind[i], ind[j] = ind[j], ind[i]
+			i++
+		}
+	}
+	arr[i], arr[high] = arr[high], arr[i]
+	ind[i], ind[high] = ind[high], ind[i]
+	return arr, i, ind
+}
+
+/* Sorts low to high using the quicksort algorithm and returns the indices of the original array */
+func custom_quickSort(arr []float32, ind []int, low, high int) ([]float32, []int) {
+	if low < high {
+		var p int
+		arr, p, ind = partition(arr, ind, low, high)
+		arr, ind = custom_quickSort(arr, ind, low, p-1)
+		arr, ind = custom_quickSort(arr, ind, p+1, high)
+	}
+	return arr, ind
 }
