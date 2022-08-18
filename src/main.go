@@ -44,9 +44,6 @@ func main() {
 	var target_ratio [][]float64 = [][]float64{{1, 1}, {1, 1}}
 	// To have a target ratio of CPU/MEM = 0.5 we would use this {{1, 0.5}, {2, 1}}
 
-	// decision variable (on what host is each container placed)
-	// var x [C]int
-
 	var arr [H]int // the hosts the containers can be placed on
 	var n int = H  // items to be combined
 	var r int = C  // sample size
@@ -67,14 +64,16 @@ func main() {
 	// fmt.Print(" ", placements)                             // combinations[placements][hosts]
 
 	placement_costs = calculate_total_costs(placements, 1.0, 1.0, 1.0, C, H, R, host_used_resources, container_resources, host_avg_resources, host_resource_capacities, target_ratio)
-	fmt.Println(placement_costs) // Since we have the placement costs, it's now only a matter of keeping the best placements (lowest cost, and applying constraints)
+	// fmt.Println(placement_costs) // Since we have the placement costs, it's now only a matter of keeping the best placements (lowest cost, and applying constraints)
 
-	// placement_costs_slice := NewSlice(placement_costs)
-	// sort.Sort(placement_costs_slice)
+	placement_costs_slice := NewSlice(placement_costs)
+	sort.Sort(placement_costs_slice)
+
+	// It prints the 3 best costs from low to high and the corresponding indices. The best solutions have the lowest cost.
+	for i := 0; i < 3; i++ {
+		fmt.Println(i+1, ") cost:", placement_costs_slice.Float64Slice[i], "- index:", placement_costs_slice.idx[i], "- placement:", placements[i])
+	}
 	// fmt.Println(placement_costs_slice.Float64Slice, placement_costs_slice.idx)
-
-	// placement_costs, indices = custom_quickSort(placement_costs, indices, 0, len(placement_costs)-1)
-	// fmt.Print("\n ", placement_costs)
 	// -------------------------------------------------------------------------------------------------
 }
 
@@ -185,50 +184,17 @@ func calculate_total_costs(placements [][]int, w1 float64, w2 float64, w3 float6
 	min_Ccost, max_Ccost := findMinAndMax(total_Ccost)
 	min_Bcost, max_Bcost := findMinAndMax(total_Bcost)
 
-	fmt.Println(min_Ucost, max_Ucost, min_Ccost, max_Ccost, min_Bcost, max_Bcost)
-
 	for i := 0; i < len(placements); i++ {
 
 		total_Ucost[i] = (total_Ucost[i] - min_Ucost) / (max_Ucost - min_Ucost)
 		total_Ccost[i] = (total_Ccost[i] - min_Ccost) / (max_Ccost - min_Ccost)
 		total_Bcost[i] = (total_Bcost[i] - min_Bcost) / (max_Bcost - min_Bcost)
 
-		// weighted_total_cost := w1*total_Ucost[i] + w2*total_Ccost[i] + w3*total_Bcost[i]
-		// weighted_total_cost := w1 * total_Ucost[i]
-		// weighted_total_cost := w2 * total_Ccost[i]
-		weighted_total_cost := w3 * total_Bcost[i]
+		weighted_total_cost := w1*total_Ucost[i] + w2*total_Ccost[i] + w3*total_Bcost[i]
 		total_costs = append(total_costs, weighted_total_cost)
 	}
-	// fmt.Println(total_costs)
 
 	return total_costs
-}
-
-/* helper function for quicksort */
-func partition(arr []float64, ind []int, low, high int) ([]float64, int, []int) {
-	pivot := arr[high]
-	i := low
-	for j := low; j < high; j++ {
-		if arr[j] < pivot {
-			arr[i], arr[j] = arr[j], arr[i]
-			ind[i], ind[j] = ind[j], ind[i]
-			i++
-		}
-	}
-	arr[i], arr[high] = arr[high], arr[i]
-	ind[i], ind[high] = ind[high], ind[i]
-	return arr, i, ind
-}
-
-/* Sorts low to high using the quicksort algorithm and returns the indices of the original array */
-func custom_quickSort(arr []float64, ind []int, low, high int) ([]float64, []int) {
-	if low < high {
-		var p int
-		arr, p, ind = partition(arr, ind, low, high)
-		arr, ind = custom_quickSort(arr, ind, low, p-1)
-		arr, ind = custom_quickSort(arr, ind, p+1, high)
-	}
-	return arr, ind
 }
 
 func (s Slice) Swap(i, j int) {
